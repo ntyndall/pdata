@@ -1,5 +1,10 @@
 #' @title Data Reader
 #'
+#' @description A function that reads the raw tab
+#'  separated input from the file /raw_data/input
+#'
+#' @importFrom magrittr %<>% %>%
+#'
 #' @export
 
 

@@ -1,10 +1,13 @@
 #' @title Plot Theme
 #'
-#' @description Holds the theme for the plots to be used in the
-#'  README
+#' @description Holds the theme for the plots to be used
+#'  with ggplot.
 #'
 #' @param fontFamily A character string that defines the font
 #'  family to be used for the axis / title / legend etc.
+#'  Default to _Gotham_
+#' @param titleFont An integer value that defines the title
+#'  font size.
 #'
 #' @export
 
@@ -83,10 +86,14 @@ plot_theme <- function(fontFamily = 'Gotham', titleFont = 16) {
 
 #' @title Map Theme
 #'
-#' @description Holds the theme for the plots using choroplethr
+#' @description Holds the theme for the plots using
+#'  ggplot choroplethr images.
 #'
 #' @param fontFamily A character string that defines the font
 #'  family to be used for the axis / title / legend etc.
+#'  Default to _Gotham_.
+#' @param titleFont An integer value that defines the title
+#'  font size.
 #'
 #' @export
 

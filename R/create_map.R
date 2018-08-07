@@ -1,4 +1,14 @@
-
+#' @title Create Map
+#'
+#' @description A function that takes a vector of zip codes
+#'  and generates a hashmap of zip codes to US states. This
+#'  function also creates a map of the US with frequency counts
+#'  of the zipCodes in each state.
+#'
+#' @param myZipCodes A vector of integer values that _should_
+#'  represent US state zip codes.
+#'
+#' @export
 
 
 create_map <- function(myZipcodes) {

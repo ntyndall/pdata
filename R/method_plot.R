@@ -1,5 +1,12 @@
 #' @title Method Plot
 #'
+#' @description A function that takes a map.data data frame
+#'  and creates stacked bar chart statistics of the type
+#'  of methodology used in map.data.
+#'
+#' @param map.data A data frame containing the full data
+#'  set, with a state column appended on.
+#'
 #' @export
 
 
@@ -16,7 +23,8 @@ method_plot <- function(map.data) {
     setdiff("IHC")
 
   # Create data frames and counts for bar chart
-  uniqStates <- map.data$state %>% unique
+  uniqStates <- map.data$state %>%
+    pdata::get_uni_states()
   methodCounts <- lapply(
     X = uniqStates,
     FUN = function(x) {

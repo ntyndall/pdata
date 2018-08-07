@@ -6,3 +6,7 @@
 \usage{
 data_reader()
 }
+\description{
+A function that reads the raw tab
+ separated input from the file /raw_data/input
+}

@@ -1,12 +1,26 @@
 #' @title Ratio Features
 #'
+#' @description A function that takes a map.data data frame
+#'  and creates ratios of typical features per state.
+#'
+#' @param map.data A data frame containing the full data
+#'  set, with a state column appended on.
+#'
 #' @export
 
 
 ratio_features <- function(map.data) {
 
-  antibodyType <- map.data$Antibody %>% unique %>% setdiff("")
-  uniqStates <- map.data$state %>% unique
+  # Determine unique antibodies
+  antibodyType <- map.data$Antibody %>%
+    unique %>%
+    setdiff("")
+
+  # Get unique states
+  uniqStates <- map.data$state %>%
+    pdata::get_uni_states()
+
+  # Loop over all unique states
   pToT <- lapply(
     X = uniqStates,
     FUN = function(x) {
@@ -56,8 +70,9 @@ ratio_features <- function(map.data) {
   ) %>%
     purrr::reduce(rbind)
 
-  # Define new labels
-  newLabels <- c("Patients", "Cancelled", antibodyType)
+  # Define new labels (Remove punctuation for PDF)
+  newLabels <- c("Patients", "Cancelled", antibodyType) %>%
+    stringr::str_replace(pattern = '[[:punct:]]+', '')
 
   g <- suppressWarnings(
     ggplot2::ggplot(

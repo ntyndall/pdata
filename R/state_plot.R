@@ -1,5 +1,14 @@
 #' @title State Plot
 #'
+#' @description A function that takes a map.data data frame
+#'  and creates county specific metrics on a state by
+#'  state basis, depending on the input provided.
+#'
+#' @param map.data A data frame containing the full data
+#'  set, with a state column appended on.
+#' @param currentState A character string that has to be
+#'  one of the 50 US states.
+#'
 #' @export
 
 
@@ -58,7 +67,7 @@ state_plot <- function(map.data, currentState = "california") {
     orange = 7
   )
 
-  # Unique antibodies
+  # Unique antibodies, remove special characters for PDF
   uniqA <- single.state$Antibody %>% table
   types <- names(uniqA)
 
@@ -83,11 +92,15 @@ state_plot <- function(map.data, currentState = "california") {
           stateZips = stateZips
         )
 
+      # Remove special characters for title for the PDF
+      ty <- types[x] %>%
+        stringr::str_replace(pattern = '[[:punct:]]+', '')
+
       # Plot the data
       singlePlot <- dataToPlot %>%
         choroplethr::county_choropleth(
           state_zoom = currentState,
-          title = paste0("Antibody : ", types[x])
+          title = paste0("Antibody : ", ty)
         ) %>%
         `+`(
           ggplot2::scale_fill_brewer(
@@ -141,6 +154,11 @@ state_plot <- function(map.data, currentState = "california") {
 #'  FIP codes and initializes them to 0 to cover every
 #'  county in the state.
 #'
+#' @param allFips A data frame containing county and
+#'  fip code data.
+#' @param stateZips A data frame containing both US zip
+#'  and fip codes.
+#'
 #' @export
 
 
@@ -164,6 +182,17 @@ missing_states <- function(allFips, stateZips) {
   # Return the possibly zero appended data frame
   return(allFips)
 }
+
+#' @title Create FIP Frame
+#'
+#' @description A function that transforms a data frame
+#'  into one that is used by choroplethr.
+#'
+#' @param fipData A data frame with two columns that has
+#'  the FIP values and corresponding frequency counts.
+#'
+#' @export
+
 
 create_fip_frame <- function(fipData) {
   fipData %<>% table %>% data.frame

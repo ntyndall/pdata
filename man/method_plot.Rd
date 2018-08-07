@@ -6,3 +6,12 @@
 \usage{
 method_plot(map.data)
 }
+\arguments{
+\item{map.data}{A data frame containing the full data
+set, with a state column appended on.}
+}
+\description{
+A function that takes a map.data data frame
+ and creates stacked bar chart statistics of the type
+ of methodology used in map.data.
+}

@@ -1,5 +1,5 @@
 ---
-title: "Geographical Analysis of Patient Data in North America for the testing of protein PD-L1"
+title: "Geographical Analysis of Patient Data in North America for the Testing of Protein PD-L1"
 author: "Niall Tyndall"
 output: pdf_document
 header-includes:
@@ -18,7 +18,14 @@ library(extrafont)
 library(extrafontdb)
 library(purrr)
 library(grid)
+```
 
+# Introduction
+
+### Loading the Data
+We start this report by loading and preparing the data set.
+
+```{r, echo=TRUE, message=FALSE}
 # Load the data set
 my.data <- pdata::data_reader()
 
@@ -30,12 +37,39 @@ map.data <- my.data %>%
 map.data$Client.Zip %<>% as.integer
 ```
 
-# Introduction
-This report outlines a brief investigation of `r my.data %>% nrow` rows of patient data, spanning over a date range of `r max(as.integer(as.Date(map.data$Month..Day..Year.of.Estimated.Ordered.Date, format = '%d-%b-%y'))) - min(as.integer(as.Date(map.data$Month..Day..Year.of.Estimated.Ordered.Date, format = '%d-%b-%y')))` days. The majority of this data set has been collected from Northern America with a few exceptions (after some analysis), such as the country of Peurto Rico, and other unknown zip codes from the **Client.Zip** header. With this in mind, the format of this report is designed to group all the data geographically, so we can investigate further and drill down specific metrics by this _grouping_ method. A minor assumption is considered to cast the data into such a form, therefore data that has **no** well defined region from the ordering physician is neglected. We could go through a process to estimate the error by considering the ratio of tests to states and during the analysis we could incorporate this error, although it should be negligible enough to avoid this task. How many records are _thrown_ away from the analysis? In total, there are `r (map.data$state == "unknown") %>% sum` ZIP codes that could not be determined, and as such, have been given a tag of _unknown_ and are also considered in the analysis. Finally, `r (my.data %>% nrow) - (map.data %>% nrow)` could not be determined at all, resulting in a total of `r ((map.data$state == "unknown") %>% sum) + (my.data %>% nrow) - (map.data %>% nrow)` missing entries (or `r round((((map.data$state == "unknown") %>% sum) + (my.data %>% nrow) - (map.data %>% nrow)) / (my.data %>% nrow) * 100, 2)`%).
+[^1]This report outlines a brief investigation of `r my.data %>% nrow` rows of patient data for the testing of protein PD-L1, spanning over a date range of `r max(as.integer(as.Date(map.data$Month..Day..Year.of.Estimated.Ordered.Date, format = '%d-%b-%y'))) - min(as.integer(as.Date(map.data$Month..Day..Year.of.Estimated.Ordered.Date, format = '%d-%b-%y')))` days. The majority of this data set has been collected from Northern America with a few exceptions (after some pre-analysis), such as the country of Peurto Rico, and other unknown zip codes from the **Client.Zip** column header. With this in mind, the format of this report is designed to group all the data geographically to investigate further and drill down specific metrics by this specific _grouping_ method. A minor assumption is considered in order to cast the data into such a form, therefore data that has **no** well defined region from the ordering physician is neglected. It is possible to go through a process of estimating the error due to these undefined regions by considering the ratio of tests to states and during the analysis we could incorporate this error, although it should be negligible enough to avoid this task. This leads to the question, how many records are _thrown_ away from the analysis? In total, there are 286 ZIP codes that could not be determined, and as such, have been provided a tag of _unknown_ and are not considered during the analysis. Finally, `r (my.data %>% nrow) - (map.data %>% nrow)` could not be determined at all, resulting in a total of `r 286 + (my.data %>% nrow) - (map.data %>% nrow)` missing entries (or `r round((286 + (my.data %>% nrow) - (map.data %>% nrow)) / (my.data %>% nrow) * 100, 2)`%).
 
-The data set that is used in the analysis is therefore almost identical to the original set, with every record having an additional piece of information, a mapping of the zip code to a US State.
 
-```{r, message=FALSE, warnings=FALSE}
+### Preparing the Data
+Below is a quick summary of some of the numerical data involved in the full dataset.
+
+```{r}
+# Generate some summary statistics of numerical data
+summary.data <- my.data %>% subset(
+  select = c(
+    "Test.Ordered.Days.From.Specimen.Collected",
+    "Test.Reported.Days.From.Specimen.Collected",
+    "Tat"
+  )
+)
+
+names(summary.data) <- c("Ordered.Days", "Reported.Days", "Tat")
+summary(summary.data)
+
+# Compute unique rows containing NA's
+uniqueNA <- summary.data$Reported.Days %>% is.na %>%
+  `|`(summary.data$Tat %>% is.na) %>%
+  `|`(summary.data$Ordered.Days %>% is.na) %>% 
+  sum
+```
+
+[^1]: Throughout this report, data columns are represented in **bold face**, R variables are represented as `camelCase verbatim`, functions are represented as `snake_case() verbatim`, and data sets are represented as `dot.separated verbatim`.
+
+This leads to a total of `r uniqueNA` unique rows that contain `NA` values as provided by `uniqueNA` above.
+
+The data set that is used in the analysis is therefore almost identical to the original set, with every record having an additional piece of information, a mapping of the zip code to a US State. As shown below, the zip codes are provided as input to the function `create_map()`, which maps them to a US state through the open source package _zipcode_.
+
+```{r, message=FALSE, warning=FALSE}
 # Get ZIP code hash and create map
 mapInfo <- map.data$Client.Zip %>%
   pdata::create_map()
@@ -46,59 +80,164 @@ map.data$state <- sapply(
   FUN = function(x) x %>% mapInfo$find()
   )
 ```
-As shown above, we pass all the zip codes into function *create_map*, which takes ZIP codes and maps them to a US state through the *zipcode* package. We obtain a hash lookup of zip codes to states and append this information on through the vectorized *sapply* functionality. This function also generates the American map of individual test counts, where I have generated both one for absolute counts and also counts, normalized by each state population per 1000 people. Generally the two images are quite similar, however the most stark difference is the flip between the central American states after normalization, such as Texas, Montana, and North Dakota. While the coastal counties of California, Florida, and Georgia (generally the whole east coast) remaining quite dominant after normalization.
 
+From here on in, I will now use the new data set of `map.data` which has is an augmented version of `my.data`. A hashmap lookup of zip codes (keys) to states (values) are also saved, and stored in `zipInfo`, which is then used to append this information through the vectorized *sapply* approach. This function also generates the American map of individual test counts, where I have generated one for absolute counts and also counts that are normalized per state population per 1000 people. Generally, the two maps are quite similar, however the most stark difference is the flip between the central American states after normalization, such as Texas, Montana, and North Dakota. While the coastal counties of California, Florida, and Georgia (generally the entire east coast) remaining quite dominant even after normalization.
+
+The remainder of this report will now consider investigations into the data set provided, using this geographical approach. There are four subsections that follow in the Results section, and a brief summary is provided in the final section, called Conclusions.
+
+\newpage
 # Results
-In this section I will outline a few different ideas and functionality built, utilizing the new, augmented data set called *map.data*. All functionality will take this data frame and break it down into individual states for analysis, depending on the analysis being carried out. 
+In this section I will outline various ideas and provide some basic functionality in the form of code snippets, utilizing the augmented data set, called `map.data`. All functionality will accept this data frame object as input and manipulate it to consider analysis into individual states.
 
-## 1) Methodologies
-After some basic manipulation, we can see clearly that the four antibodies used as a diagnostic all use the same methodology; *IHC*, representing `r round(((map.data$Methodology == "IHC") %>% sum) / (map.data %>% nrow) * 100, 1)`% of the total data set. PD-L1 is tested using 2 other methodologies, defined here by Histology and Next-generation sequencing (NGS).
-```{r, message=FALSE, warnings=FALSE}
+### 1) Methodologies
+After some basic analysis, we can see clearly that the four antibodies used as a diagnostic all use the same methodology; *IHC*, representing `r round(((map.data$Methodology == "IHC") %>% sum) / (map.data %>% nrow) * 100, 1)`% of the total data set. 
+
+```{r}
+# Create a summary of the Methodologies
+summaryTable <- map.data$Methodology %>%
+  table %>%
+  data.frame
+
+# Get percentage
+summaryTable$Per <- summaryTable$Freq %>% 
+  `/`(map.data %>% nrow) %>% 
+  `*`(100) %>%
+  round(2)
+
+names(summaryTable) <- c("Methodology", "Count", "Per")
+
+knitr::kable(
+  x = summaryTable, 
+  align = "c",
+  caption = "A table containing the Methodology types and percentages of the total data set."
+)
+
+```
+
+PD-L1 is also tested using 2 other methodologies, defined here by Histology and Next-generation sequencing (NGS). The snippet below provides the function call `method_plot()` to generate this stacked bar chart and is stored in `mResults`. This bar chart depicts the remaining two methodologies for the ten highest state counts.
+
+```{r, message=FALSE, warning=FALSE}
 # Return results from top methodologies per state
 mResults <- map.data %>% 
   pdata::method_plot()
 
 mResults
 ```
-Above, we plot the results as a bar chart for the remaining two methodologies for the 10 highest state counts. In taking this approach we can see the difference between these results, without being swamped by the remaining `r round(((map.data$Methodology == "IHC") %>% sum) / (map.data %>% nrow) * 100, 1)`% IHC method. We could further this analysis by considering test specifics for these methods as opposed to IHC by looking at the anatomical site the sample was removed from etc. It is clear from the chart that New Jersey and Florida (East coast) have the highest usage of NGS methods, and California and Texas have a higher percentage use of Histology (West coast).
 
-## 2) Turnaround times
-The next investigation revolved around looking at the turn aroundtimes recorded for each test on a US state basis. Nothing overly complex was carried out with the data here, although more effort could be spent to give some sort of errors on the results of the box plots. No data cleansing of such was carried out, as no preliminary evidence to support this would have enhanced the results. One such solution could have analysed each state in turn, and then tried to fill in the missing blanks between the number of days between result reported and number of days between test order date from the specimen collection date. In other words, either calculating averages on the data set available and filling in the blanks with a simple median value, or looking at a time series approach and looking at surrounding x days of a missing value and fitting some sort of spline to estimate that value. However, due to time constraints, none of this was implemented and more than likely, would have made little difference to the results.
-```{r, message=FALSE, warnings=FALSE}
+In taking this approach we can see the differences and magnitudes between these methodology uses, without being swamped by the remaining `r round(((map.data$Methodology == "IHC") %>% sum) / (map.data %>% nrow) * 100, 1)`% IHC method. It is clear from the chart that New Jersey and Florida (East coast) have the highest usage of NGS methods, whereas California and Texas have a higher percentage use of Histology (West coast). It is possible to further this analysis by considering test specifics for these methods as opposed to IHC by looking at the anatomical site the sample was removed from - as an example. This approach provides a layer, in general, to look at specific features within the context of method being carried out in the test.
+
+### 2) Turnaround times
+The next investigation revolved around looking at the turnaround times recorded for each test on a US state basis. Nothing overly complex was carried out with the data here as the times have been recorded under the column **Tat**, although more effort could be spent to provide some error on the results of the boxplots. No data cleansing of such was carried out, as no preliminary evidence to support this would have enhanced the results. One such solution could have involved analysing each state in turn, and then predicting the missing `NA` values between the number of days between result reported and number of days between test order date from the specimen collection date. In other words, either calculating averages on the data set available and updating `NA`'s with the median/mean value, or looking at a time series approach and investigating the surrounding x days and fitting a polynomial spline to estimate that value. However, due to time constraints, none of this was implemented and more than likely, would have made little difference to the results. Below is a snippet for the state of Texas where we plot the time series data and their turnaround times to estimate the single `NA` value in this data set as 15.96 (which turns out to be approximately the value of $\mu$).
+
+\newpage
+```{r}
+# Look at the time series of Texas
+texas <- map.data %>%
+  subset(map.data$state %>% `==`('texas'))
+
+# Get x-axis values (timestamps)
+allDates <- texas$Month..Day..Year.of.Estimated.Ordered.Date %>% 
+  as.Date(format = '%d-%b-%y') %>% 
+  as.integer
+
+# Get the time indexes for the ordered time series
+indexes <- allDates %>%
+  order
+
+# Get ordered days (ordered / sorted)!
+orderedDays <- texas$Test.Ordered.Days.From.Specimen.Collected %>%
+  `[`(indexes)
+
+# Pick up a missing value (only 1 [= 1888])
+missing <- orderedDays %>% 
+  is.na %>% 
+  which
+
+# Now get the surrounding timestamp
+surroundingInd <- c(
+  (missing - 100):(missing - 1), c(missing + 1):(missing + 100)
+)
+orderedDays %<>% `[`(surroundingInd)
+
+# Define x axis with one free in the middle where NA is
+xAxis <- c(c(1:100), c(102:(surroundingInd %>% length %>% `+`(1))))
+
+# Remove possible outliers (set to 100 also)
+chopVals <- orderedDays %>% 
+  `>`(100)
+
+# Calculate mean without the outliers
+unChoppedMean <- orderedDays %>% 
+  `[`(chopVals %>% `!`()) %>% 
+  mean
+
+# Replace outliers with calculated mean
+orderedDays[chopVals] <- unChoppedMean
+
+# Set up data frame for linear regression + prediction
+new.data <- data.frame(
+  x = xAxis, 
+  y = orderedDays, 
+  stringsAsFactors = FALSE
+)
+
+# Make the prediction
+linearPred <- predict(lm(y ~ x, data = new.data), data.frame(x = 101)) %>%
+  as.double
+```
+
+The next snippet below shows a call to `reporting_time()` with the `map.data` set, returning a boxplot for every US state, recording the aggregated statistics of turnaround time in days.
+
+```{r, message=FALSE, warning=FALSE}
+# Create turnaround time boxplots
 rResults <- map.data %>% 
   pdata::reporting_time()
 
 rResults
 ```
-This analysis was relatively simple, from the snippet above, a call to *reporting_time* with the map data provides a boxplot for every US state, recording the aggregated statistics of turnaround time in days. The extent of the whiskers here is not the typical 100%, but instead is set to 95% to see some of the outliers from the quartiles. The plot has also been cut to inspect the boxplots easier. Most of the data is infact relatively similar across the board here, with nothing really catching the eye. I have included a summary function of the mean overlaid with the boxplots to see the averages per state. While most median values lie around the 3 / 4 day turnaround period, the states of North Carolina and New Jersey are slightly higher, around 6 days turnaround. 
+
+The extent of the whiskers here is not the typical 100%, but instead is set to 95% to visualise some of the outliers from the quartiles. The plot has also been cut at twenty days to inspect the boxplots closer. Most of the data is in fact relatively similar across each state, with nothing really catching the eye. I have included a summary function of the mean overlaid with the boxplots in red to analyse the typical averages per state. While most median values lie around the 3 or 4 day turnaround period, the states of North Dakota and New Jersey are slightly higher, around 6 days turnaround and also a much larger deviation from the widths of their respective boxplots. In contrast, the District Of Columbia has the lowest avergae turnaround time, at just 2 days with a compact boxplot, which emphasises that the results vary little.
+
 ```{r}
+# Return large turnaround times (over 50)
 tat.anom <- map.data %>% subset(
   map.data$Tat %>% `>`(50), 
   select = c(
-    "Specimen.Type", "Methodology", "Tat"
+    "Test.Order.Id", "Body.Site", "Specimen.Type", "Methodology", "Tat", "state"
   )
 )
+
+# Return JUST the order ID
+tat.anom$Test.Order.Id %<>%
+  strsplit(split = ',') %>%
+  purrr::map(1) %>% 
+  as.character
 
 knitr::kable(
   x = tat.anom[tat.anom$Tat %>% order %>% rev, ],
   row.names = FALSE, 
   align = "c", 
-  caption = "Possible anomalous values of turn around times that are above 50 days."
+  caption = "Possible anomalous values of turnaround times that are above 50 days."
 )
 ```
 
-As this plot has been chopped at roughly 20 days, there are still values that exceed this. The above snippet provides some possible *anomalous* behaviour in turn around times for tests reported, and could shed some light into erronous results obtained or issues concerning specific tests.
+As this plot has been sliced at approximately twenty days, there are still values that exceed this. The above snippet provides some possible *anomalous* behaviour in turnaround times for tests reported, and could shed some light into erronous results obtained or issues concerning specific tests. For example, digging into the underlying reason why some of the largest turnaround times originate from California. The _select_ argument above controls the return items for the table and helps to pinpoint common trends.
 
-## 3) State Data Spreads
-This section is useful to provide a high level overview of some of the data, again on a state by state basis, by looking at well defined results and reporting on states that deviate largely from the norm. I have chosen to use boxplots again to display the deviation of particular results, and will take simple ratios of insightful data to help us build a better picture of particlar features.
-```{r, message=FALSE, warnings=FALSE}
+### 3) State Data Spreads
+This third section is useful in providing a high level overview of some of the features or combination of features in the `map.data`, again on a state by state basis. This is achieved by looking at well defined results and reporting on states that deviate largely from the norm. I have chosen to use boxplots again to display the deviation of results, and will take simple ratios of insightful data to help us build a better picture of particlar features. The snippet below provides the function call to `ratio_features()` for this operation, and the resulting graphic is stored in the list object `ratioResults$plot`.
+
+```{r, message=FALSE, warning=FALSE}
+# Create the ratio data of various features
 ratioResults <- map.data %>%
   pdata::ratio_features()
 
-suppressWarnings(ratioResults$plot)
+ratioResults$plot
 ```
-The above snippet calls some function *ratio_features* with map data to return a boxplot of defined ratios to take per US state, while returning the maximum results in the form of a data frame. This could easily be extended to included, say the 3 highest plus 3 lowest ratios, or even those that closely match the norm for particular states depending on the analysis being carried out. However, for the purpose of this report I will consider the maximum. Looking bottom to top; the first boxplot (red) represents the number of patients actually carrying out tests in each state, and the second boxplot (yellow) is the fraction of tests that have been cancelled. The remaining four boxplots represent the antibody being used as a diagnostic in each test. 
+
+This function also returns a data frame object as a list of the individual ratios and is accessible through `ratioResults$data`, which will be shown shortly. The plot above displays boxplots of defined ratios per US state. Looking bottom to top; the first boxplot (red) represents the number of patients actually carrying out tests in each state, and the second boxplot (yellow) is the fraction of tests that have been cancelled. The remaining four boxplots represent the antibody being used as a diagnostic in each test. I will expand on these results below using the tabulated form. The following snippet provides the details to cast the results into a human readable form
+
 ```{r}
+# Construct table from the output
 ratioData <- ratioResults$data
 tabNames <- ratioData %>% names
 
@@ -111,6 +250,7 @@ blnk <- data.frame(
 for (i in 1:(ratioData %>% length)) {
   ratioData[[i]]$type <- NULL
   ratioData[[i]]$patientToTest %<>% signif(digits = 2)
+  ratioData[[i]]$uniqueState %<>% openintro::state2abbr()
   ratioData[[i]] <- rbind(
     ratioData[[i]][1:2, ], 
     blnk,
@@ -126,21 +266,31 @@ knitr::kable(
   x = ratioData %>% purrr::reduce(cbind),
   row.names = FALSE, 
   align = "c", 
-  caption = "The table of extremeties of boxplot information that includes the ratio data."
+  caption = paste0(
+    "A table of the maximum two states, the middle ",
+    "value state, and the two minimum states of ",
+    "ratio data from the boxplot information"
+  )
 )
 ```
 
-The above table represents some of the results of the boxplot, and can give some meaning to these results. For example, the ratio of patients to tests for (..state..) is high, meaning that very few patients are retested, in comparison to (...state...), where nearly only 1 in every 2 patients are being tested for the first time. The number of cancellations is also useful, as it is possible to identify locations where tests are being cancelled at a higher rate, which could be indicative of multiple issues. Again, these are just some of the many results that can be obtained from this analysis. 
+This table above represents a fraction of the results from the boxplots, and can provide some interpretation of the data. For example, the ratio of patients to tests in the first two columns for South Dakota is high, meaning that very few patients are re-tested, in comparison to Arizona, where nearly only 1 in every 2 patients are being tested for the first time (all constrained within the time period of `my.data`). The number of cancellations is also useful, as it is possible to identify locations where tests are being cancelled at a higher rate than others, which could be indicative of multiple issues. Surprisingly, looking at the third and fourth columns, Maryland has the highest cancellation ratio of any state, and Delaware has zero in total, despite geographically the two states being neighbours. Again, these are just some of the many results that can be obtained from this analysis, and the statistics on antibodies used in testing are also provided in the remaining columns. We can also show or report on states that do not use the antibody _SP142_ or _SP263_, denoted by zero's in their respective columns.
 
-## 4) Specific State Information (California)
-This final section is to help visualise more of the data on a more granular level. The data set that we have been working with *map.data*, is now not enough for this section, and we must now involve individual county information in order to plot these results. This is probably a little more complex than the previous investigations, as a number of edge cases need to be handled for the general case. A default state is currently employed, and we look at California, as from the world map has the highest absolute tests per US state. However, it is possible to supply the input argument **currentState** to this function with any of the states in map.data (excluding unknown of course). To do so, I have mapped the initial ZIP code, as considered earlier, to a US standard FIPS county code. Further checks to look for missing FIPS information must also be considered to create the data set required for the packaged **choroplethr**. I have written this function to look at the antibodies used in each test geographically across the state, however this could easily be extended.
-```{r, message=FALSE, warnings=FALSE, results='asis'}
+### 4) Specific State Information (California)
+This final section is useful to help visualise these larger aggregated data sets on a more granular state level. The data set that we have been working with (`map.data`) is now not enough for this section, and we must involve individual county information in order to plot meaningful results. This is probably a little more intricate than the previous investigations, as a number of edge cases are required to be handled for the general case. A default state of _California_ is currently employed, as this state has the highest absolute test count from the initial world map shown in the introduction. However, it is possible to supply the input argument `currentState` to this function with any of the states in `map.data` (excluding _unknown_ of course). To do so, I have mapped the initial ZIP code, as handled earlier when calculating state data, to a US standard FIPS county code. Further checks to look for missing FIPS information must also be considered to create the data set required for the package *choroplethr*. I have written this function to look at the antibodies used in each test geographically across any state, however this could easily be extended to look at other features investigated in the previous sections of this report. The snippet below creates the $2\times 2$ state plots.
+
+```{r, message=FALSE, warning=FALSE, results='asis'}
 # Look at the most populous counts - california
 california <- map.data %>%
   pdata::state_plot()
 ```
-The above snippet will create the 2x2 plot of california for each of the 4 antibodies considered in the data set. It is clear to see from the boxplot of ratios across all states also conforms to the results found here, where Antibody 22c3 is vastly more used in testing compared with the likes of SP263, where only single values are obtained across the counties.
-```{r Tables, echo=FALSE, results='asis'}
+
+This plot represents each of the 4 antibodies considered in the data set for the state of _California_. It is clear to see from the boxplot of ratios across all states also conforms to the results found here, where Antibody _22c3_ is vastly more used in testing compared with the likes of _SP263_, where only single figure values are obtained across the counties.
+
+I have provided a further snippet to access the data and represent it in tabular form for the four most frequent counties in _California_ for each antibody.
+
+```{r echo=TRUE, results='asis'}
+# Create table for state metrics of California
 tabNames <- california %>% names
 for (i in 1:4) {
   california[[i]]$region <- NULL
@@ -153,11 +303,16 @@ knitr::kable(
   x = california %>% purrr::reduce(cbind),
   row.names = FALSE, 
   align = "c", 
-  caption = "The table of highest frequency counts for each of the 4 antibodies considered during testing."
+  caption = paste0(
+    "The table of highest frequency counts for each ",
+    "of the 4 antibodies considered during testing."
+  )
 )
 ```
 
-The patterns across the antibodies used in testing across California are quite consistent, and even from the table you can see the most frequent occur in Los Angeles and Orange County. This helps provide a more granular vision of the data, right down to the county level.
+The patterns across the antibodies used in testing across California are quite consistent, and even from the table you can see the most frequent occur in Los Angeles and Orange County. This helps provide a more granular vision of the data, right down to the county level. It is also possible to create a more general approach to look at not only Antibodies used in testing, but other useful features.
 
 # Conclusions
-This final section is simply a brief summary of the analysis carried out. I have taken the route of analysing this data based on geographic location, showing some of the possibilities that can be achieved through a rough, high level perspective. The investigation can be carried through further for most of these sections, incorporating other features from the data set and testing hypotheses and trying to identify further correlations.
+This final section is simply a brief summary of the analysis carried out. I have taken the route of analysing this data based on geographic location, showing some of the possibilities that can be achieved through a high level perspective. The final results in section 4 outlines an approach to further delve and group the data on the county level, which can provide details right down to this level of detail (and even city specific results if required). The investigation can be carried through further for most of these sections, incorporating other features from the data set and testing hypotheses and trying to identify correlated data.
+
+I have touched a little on carrying out some time series analysis based on section 3 to try and fill `NA` values with something more meaningful. A similar approach could be taken to apply this to other features and metrics of the `map.data`. I have categorized the majority of this data as input features, however, provided some output of test results it could be possible to utilize feature sets such as **Body.Site** and **state** to name a few to try and analyse and predict test outcomes or results. Other grouping parameters could have also been performed to specify key regions where samples are removed by categorizing **Body.Site** even further. With more time, I would have liked to investigate correlations with **Body.Site** and **Icd.Codes**, using dates and other deciding factors.

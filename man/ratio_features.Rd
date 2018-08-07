@@ -6,3 +6,11 @@
 \usage{
 ratio_features(map.data)
 }
+\arguments{
+\item{map.data}{A data frame containing the full data
+set, with a state column appended on.}
+}
+\description{
+A function that takes a map.data data frame
+ and creates ratios of typical features per state.
+}

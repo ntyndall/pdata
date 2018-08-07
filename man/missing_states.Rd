@@ -6,6 +6,13 @@
 \usage{
 missing_states(allFips, stateZips)
 }
+\arguments{
+\item{allFips}{A data frame containing county and
+fip code data.}
+
+\item{stateZips}{A data frame containing both US zip
+and fip codes.}
+}
 \description{
 A function that calculates the missing
  FIP codes and initializes them to 0 to cover every

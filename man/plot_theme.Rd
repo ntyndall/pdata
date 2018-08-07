@@ -8,9 +8,13 @@ plot_theme(fontFamily = "Gotham", titleFont = 16)
 }
 \arguments{
 \item{fontFamily}{A character string that defines the font
-family to be used for the axis / title / legend etc.}
+family to be used for the axis / title / legend etc.
+Default to _Gotham_}
+
+\item{titleFont}{An integer value that defines the title
+font size.}
 }
 \description{
-Holds the theme for the plots to be used in the
- README
+Holds the theme for the plots to be used
+ with ggplot.
 }

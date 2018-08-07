@@ -6,3 +6,15 @@
 \usage{
 state_plot(map.data, currentState = "california")
 }
+\arguments{
+\item{map.data}{A data frame containing the full data
+set, with a state column appended on.}
+
+\item{currentState}{A character string that has to be
+one of the 50 US states.}
+}
+\description{
+A function that takes a map.data data frame
+ and creates county specific metrics on a state by
+ state basis, depending on the input provided.
+}
