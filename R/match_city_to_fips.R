@@ -1,13 +1,13 @@
 #' @title Match City To FIPS
-#' 
+#'
 #' @export
 
 
 match_city_to_fips <- function(data.set, cityCol = "City", stateName) {
 
   # Get FIPs code based on state
-  single.state <- stateName %>% 
-    subset_state()
+  single.state <- stateName %>%
+    us.mapper::subset_state()
 
   # Append FIPs on where possible
   data.set$fips <- lapply(
@@ -21,9 +21,9 @@ match_city_to_fips <- function(data.set, cityCol = "City", stateName) {
         }
       )
     }
-  ) %>% 
+  ) %>%
     purrr::flatten_dbl()
-  
+
   # Return updated data set back
   return(data.set)
 }

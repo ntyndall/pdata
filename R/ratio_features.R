@@ -18,7 +18,7 @@ ratio_features <- function(map.data) {
 
   # Get unique states
   uniqStates <- map.data$state %>%
-    pdata::get_uni_states()
+    us.mapper::get_uni_states()
 
   # Loop over all unique states
   pToT <- lapply(

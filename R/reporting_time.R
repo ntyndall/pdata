@@ -14,7 +14,7 @@ reporting_time <- function(map.data) {
 
   # Get unique states again (state by state basis)
   uniqueStates <- map.data$state %>%
-    pdata::get_uni_states()
+    us.mapper::get_uni_states()
 
   # Loop over and filter all states and create unique data frames
   finalTats <- lapply(

@@ -1,4 +1,4 @@
-Package: pdata
+Package: us.mapper
 Type: Package
 Title: What the Package Does (Title Case)
 Version: 0.1.0
@@ -19,5 +19,6 @@ Imports:
     ggplot2,
     noncensus,
     gridExtra,
-    knitr
+    knitr,
+    gdata
 RoxygenNote: 6.0.1

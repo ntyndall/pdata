@@ -54,8 +54,8 @@ state_plot <- function(map.data, currentState = "california") {
 
   # Create basic data and append missing regions.
   fipFrame <- allFips %>%
-    pdata::create_fip_frame() %>%
-    pdata::missing_states(
+    us.mapper::create_fip_frame() %>%
+    us.mapper::missing_states(
       stateZips = stateZips
     )
 
@@ -108,7 +108,7 @@ state_plot <- function(map.data, currentState = "california") {
           )
         ) %>%
         `+`(
-          pdata::map_theme(titleFont = 16)
+          us.mapper::map_theme(titleFont = 16)
         )
 
       # Get the top fips of the data set and convert back to a county..

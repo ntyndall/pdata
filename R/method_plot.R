@@ -24,7 +24,7 @@ method_plot <- function(map.data) {
 
   # Create data frames and counts for bar chart
   uniqStates <- map.data$state %>%
-    pdata::get_uni_states()
+    us.mapper::get_uni_states()
   methodCounts <- lapply(
     X = uniqStates,
     FUN = function(x) {

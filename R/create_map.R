@@ -107,7 +107,7 @@ create_map <- function(myZipcodes) {
           legend = 'Tests'
         ) %>%
         `+`(
-          pdata::map_theme(titleFont = 16)
+          us.mapper::map_theme(titleFont = 16)
         ) %>%
         `+`(
           ggplot2::scale_fill_brewer(
